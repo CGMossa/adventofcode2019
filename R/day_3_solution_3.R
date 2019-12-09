@@ -50,9 +50,9 @@ follow_the_wire <- function(wire) {
   direction <- substr(wire[1], 1, 1)
   distance  <- as.integer(substring(wire[1], 2, nchar(wire[1])))
   for (dest in wire) {
-    results <- append(results, list(list(x = x, y = y, direction = direction, distance = distance)))
     direction <- substr(dest, 1, 1)
     distance  <- as.integer(substring(dest, 2, nchar(dest)))
+    results <- append(results, list(list(x = x, y = y, direction = direction, distance = distance)))
 
     # switch(direction,
     #        R = {},
@@ -298,19 +298,102 @@ problem_cross_points %>% distance_from_origin
 example_1_cross_points %<>% filter(!boolean_remove) %>% select(cross_point_id, x, y)
 example_2_cross_points %<>% filter(!boolean_remove) %>% select(cross_point_id, x, y)
 example_3_cross_points %<>% filter(!boolean_remove) %>% select(cross_point_id, x, y)
-problem_cross_points %<>% filter(!boolean_remove) %>% select(cross_point_id, x, y)
+problem_cross_points   %<>% filter(!boolean_remove) %>% select(cross_point_id, x, y)
 
-example_1_cross_points %>% nest(data = c(x,y))
-example_2_cross_points %>% nest(data = c(x,y))
-example_3_cross_points %>% nest(data = c(x,y))
+# explorative..
+example_1_cross_points %>% nest(data = c(x, y))
+example_2_cross_points %>% nest(data = c(x, y))
+example_3_cross_points %>% nest(data = c(x, y))
 problem_cross_points
 
-example_1_df
+#' Note that this function is eerily similar to the `segment`-function. Thus
+#' it is really unnecessary.
+finding_location_of_cross_point <- . %>%
+  rename(x_prev = x, y_prev = y) %>%
+  group_by(wire_id) %>%
+  mutate(x_next = lead(x_prev), y_next = lead(y_prev)) %>%
+  ungroup()
 
+ex_1_wire_df <- example_1_df %>% finding_location_of_cross_point()
+ex_2_wire_df <- example_2_df %>% finding_location_of_cross_point()
+ex_3_wire_df <- example_3_df %>% finding_location_of_cross_point()
 
+problem_wire_df <- problem_df %>% finding_location_of_cross_point()
 
-example_3_cross_points %>% nest(data = c(x,y)) %>%
-  pmap(function(cross_point_id, data) {
+steps_to_cross_points <- function(cross_points_df, wire_df) {
 
-  })
+  cross_points_df %>%
+    crossing(wire_df = wire_df %>%
+               group_by(wire_id) %>% nest(wire_df = c(
+                 x_prev, x_next, y_prev, y_next, direction, distance
+               ))) %>%
+    unpack(wire_df) %>%
+    # group_by(wire_id) %>%
+    mutate(traveled_distance = pmap(., function(x, y, wire_df, ...) {
+      traveled_distance <- 0
+      # foreach::foreach(
+      for (o in seq_len(nrow(wire_df))) {
+
+        x_prev    = wire_df$x_prev[o]
+        y_prev    = wire_df$y_prev[o]
+        x_next    = wire_df$x_next[o]
+        y_next    = wire_df$y_next[o]
+        distance  = wire_df$distance[o]
+        direction = wire_df$direction[o]
+        switch(
+          direction,
+          U = {
+            if (x == x_prev & y_prev <= y & y <= y_next) {
+              # print(glue("step {o}"))
+              return(traveled_distance + y - y_prev)
+            } else {
+              traveled_distance <- traveled_distance + distance
+            }
+          },
+          R = {
+            if (y == y_prev & x_prev <= x & x <= x_next) {
+              # print(glue("step {o}"))
+              return(traveled_distance + x - x_prev)
+            } else {
+              traveled_distance <- traveled_distance + distance
+            }
+          },
+          L = {
+            if (y == y_prev & x_next <= x & x <= x_prev) {
+              # print(glue("step {o}"))
+              return(traveled_distance + x_prev - x)
+            } else {
+              traveled_distance <- traveled_distance + distance
+            }
+          },
+          D = {
+            if (x == x_prev & y_next <= y & y <= y_prev) {
+              # print(glue("step {o}"))
+              return(traveled_distance + y_prev - y)
+            } else {
+              traveled_distance <- traveled_distance + distance
+            }
+          })
+      }
+      traveled_distance
+    })) %>%
+    unnest(traveled_distance) %>%
+    group_by(cross_point_id) %>%
+    summarise(total_distance = sum(traveled_distance)) %>%
+    arrange(total_distance) %>%
+    identity()
+}
+
+#' Example 1 answer: 30
+steps_to_cross_points(cross_points_df = example_1_cross_points, wire_df = ex_1_wire_df)
+#' Example 2 answer: 610
+steps_to_cross_points(cross_points_df = example_2_cross_points, wire_df = ex_2_wire_df)
+#' Example 3 answer: 410
+steps_to_cross_points(cross_points_df = example_3_cross_points, wire_df = ex_3_wire_df)
+
+#' Problem answer..???
+steps_to_cross_points(cross_points_df = problem_cross_points, wire_df = problem_wire_df)
+#' Answer: 9006.
+#'
+
 
