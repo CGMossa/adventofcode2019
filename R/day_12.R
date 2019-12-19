@@ -89,23 +89,10 @@ second_example[[101]]
 problem <- day_12("<x=13, y=9, z=5>
 <x=8, y=14, z=-2>
 <x=-5, y=4, z=11>
-<x=2, y=-6, z=1>", max_steps = 1000) %>%
-  tail(1)
 <x=2, y=-6, z=1>", max_steps = 1000)
 
 
-problem
 problem %>%
   tail(1)
 #' ANSWER: 6490
 
-#
-# second_example %>%
-#   transpose() %>%
-#   # simplify_all() %>%
-#   as_tibble() %>%
-#   unnest(step) %>%
-#   unnest(state) %>%
-#
-#
-#   identity()
