@@ -96,3 +96,81 @@ problem %>%
   tail(1)
 #' ANSWER: 6490
 
+library(rayshader)
+
+
+problem %>%
+  `[`(-1) %>%
+  transpose() %>%
+  as_tibble() %>%
+  unnest(c(step, total_energy)) %>%
+  mutate(state = state %>%
+           set_names(step) %>%
+           map(. %>% as_tibble %>% rowid_to_column)) %>%
+  select(-total_energy) %>%
+
+  unnest(state) %>%
+  # mutate(regular_z = (pos_z - min(pos_z)) / (max(pos_z) - min(pos_z))) %>%
+  # mutate(regular_z = scale(pos_z)) %>%
+  mutate(regular_z = identity(pos_z)) %>%
+  identity() %>% {
+
+    ggplot(.,
+           aes(pos_x, pos_y,
+               color = factor(rowid),
+               # size = pos_z)) +
+               size = regular_z)) +
+
+      geom_point() +
+
+      geom_segment(
+        inherit.aes = FALSE,
+        aes(pos_x, pos_y,
+            color = factor(rowid),
+            xend = vel_x + pos_x, yend = vel_y + pos_y),
+        size = 1,
+        alpha = .5,
+        arrow = NULL) +
+
+      # coord_fixed() +
+      labs(
+        size = "z", x = "x", y = "y") +
+      guides(color = "none") +
+      theme(legend.position = "top") +
+      NULL
+  } -> ggplot_animation
+
+
+animate_plot <- ggplot_animation +
+  gganimate::transition_states(
+    step,
+    transition_length = 1,
+    state_length = 1,
+    wrap = TRUE) +
+  gganimate::ease_aes('linear') +
+
+  labs(caption = "Step: {closest_state}")
+
+
+
+# animated_problem_plot %>%
+#   gganimate::animate(., nframes = Inf)
+
+# gganimate::animate(animated_problem_plot,
+#                    width = 800, height = 800,
+#                    # fps = 1,
+#                    # duration = 10,
+#                    nframes = 1e3 * 2) %>%
+#                    # nframes = 1e3 * 3)
+#   gganimate::anim_save("day_12_problem.gif", animation = .)
+
+# PART TWO ----------------------------------------------------------------
+
+
+P <- problem[[1]]$state[,1:3]
+A <-
+B <- cbind(diag(1, nrow = 3, ncol = 3),diag(1, nrow = 3, ncol = 3))
+
+
+
+A %*% P %*% B
