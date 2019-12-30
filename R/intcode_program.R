@@ -87,7 +87,6 @@ intcode_day_5 <- function(input, opcode_input) {
 
     opcode <- DE
 
-
     switch(as.character(opcode),
            `1`  = {
              left         <- input[opcode_index + 1]
@@ -102,6 +101,7 @@ intcode_day_5 <- function(input, opcode_input) {
              stopifnot(A == 0)
              result_index <- input[opcode_index + 3] + 1
              input[result_index] <- left + right
+             opcode_index <- opcode_index + 4
            },
            `2`  = {
              left         <- input[opcode_index + 1]
@@ -116,6 +116,7 @@ intcode_day_5 <- function(input, opcode_input) {
              stopifnot(A == 0)
              result_index <- input[opcode_index + 3] + 1
              input[result_index] <- left * right
+             opcode_index <- opcode_index + 4
            },
            `3`  = {
              # take input
@@ -123,6 +124,7 @@ intcode_day_5 <- function(input, opcode_input) {
              if (C == 0) {
                input[left + 1] <- opcode_input
              }
+             opcode_index <- opcode_index + 2
            },
            `4`  = {
              # print output at position
@@ -132,9 +134,63 @@ intcode_day_5 <- function(input, opcode_input) {
              }
 
              opcode_output <- left
-             # opcode_output <- input[left]
 
              cat(opcode_output, '\n')
+             opcode_index <- opcode_index + 2
+           },
+           `5` = {
+             opcode_index <- opcode_index + 3
+             # jump-if-true
+             left <- input[opcode_index + 1]
+             if (C == 0) {
+               left <- input[left + 1]
+             }
+             if (left != 0) {
+               right <- input[opcode_index + 2]
+               if (B == 0) {
+                 right <- input[right + 1]
+               }
+               opcode_index <- right + 1
+             }
+           },
+           `6` = {
+             opcode_index <- opcode_index + 3
+             # jump-if-false
+             left <- input[opcode_index + 1]
+             if (C == 0) {
+               left <- input[left + 1]
+             }
+             if (left == 0) {
+               right <- input[opcode_index + 2]
+               if (B == 0) {
+                 right <- input[right + 1]
+               }
+               opcode_index <- right + 1
+             }
+           },
+           `7` = {
+             left  <- input[opcode_index + 1]
+             right <- input[opcode_index + 2]
+             if (C == 0) {
+               left <- input[left + 1]
+             }
+             if (B == 0) {
+               right <- input[right + 1]
+             }
+             input[input[opcode + 3] + 1] <- left < right
+             opcode_index <- opcode_index + 4
+           },
+           `8` = {
+             left  <- input[opcode_index + 1]
+             right <- input[opcode_index + 2]
+             if (C == 0) {
+               left <- input[left + 1]
+             }
+             if (B == 0) {
+               right <- input[right + 1]
+             }
+             input[input[opcode + 3] + 1] <- left == right
+             opcode_index <- opcode_index + 4
            },
            `99` = {
              print("Finished.")
@@ -145,14 +201,6 @@ intcode_day_5 <- function(input, opcode_input) {
            }
     )
 
-    if (any(opcode %in% 1:2)) {
-      #next opcode index
-      opcode_index <- opcode_index + 4
-    }
-    if (any(opcode %in% 3:4)) {
-      #next opcode index
-      opcode_index <- opcode_index + 2
-    }
     if (opcode_index > length(input)) {
       stop("Loop broke")
       # print("Loop broke")
@@ -162,6 +210,29 @@ intcode_day_5 <- function(input, opcode_input) {
   # input
   input %>% head(1)
 }
+
+# 3,9,8,9,10,9,4,9,99,-1,8 - Using position mode, consider whether the input is equal to 8; output 1 (if it is) or 0 (if it is not).
+# 3,9,7,9,10,9,4,9,99,-1,8 - Using position mode, consider whether the input is less than 8; output 1 (if it is) or 0 (if it is not).
+# 3,3,1108,-1,8,3,4,3,99   - Using immediate mode, consider whether the input is equal to 8; output 1 (if it is) or 0 (if it is not).
+# 3,3,1107,-1,8,3,4,3,99   - Using immediate mode, consider whether the input is less than 8; output 1 (if it is) or 0 (if it is not).
+
+part2_eg <- list(c(3,9,8,9,10,9,4,9,99,-1,8), #- Using position mode, consider whether the input is equal to 8; output 1 (if it is) or 0 (if it is not).
+                 c(3,9,7,9,10,9,4,9,99,-1,8), #- Using position mode, consider whether the input is less than 8; output 1 (if it is) or 0 (if it is not).
+                 c(3,3,1108,-1,8,3,4,3,99),   #- Using immediate mode, consider whether the input is equal to 8; output 1 (if it is) or 0 (if it is not).
+                 c(3,1107,-1,8,3,4,3,99)) %>% #- Using immediate mode, consider whether the input is less than 8; output 1 (if it is) or 0 (if it is not).
+  set_names(seq_along(.))
+
+intcode_day_5(part2_eg$`1`, opcode_input = 8)  # 1
+intcode_day_5(part2_eg$`1`, opcode_input = 4)  # 0
+intcode_day_5(part2_eg$`1`, opcode_input = 12) # 0
+intcode_day_5(part2_eg$`2`, opcode_input = 8)  # ?
+intcode_day_5(part2_eg$`2`, opcode_input = 4)  # 1
+intcode_day_5(part2_eg$`2`, opcode_input = 10) # 0
+intcode_day_5(part2_eg$`3`, opcode_input = 8)  # 1
+intcode_day_5(part2_eg$`3`, opcode_input = 4)  # 0
+intcode_day_5(part2_eg$`3`, opcode_input = 12) # 0
+intcode_day_5(part2_eg$`4`, opcode_input = 8)  # ?
+intcode_day_5(part2_eg$`4`, opcode_input = 4)  # 1
 
 intcode_day_5(c(3,0,4,0,99), opcode_input = 15555)
 
